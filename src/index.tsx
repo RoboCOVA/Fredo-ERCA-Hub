@@ -147,11 +147,11 @@ app.get('/api/erca/tax-summary', async (c) => {
       SELECT 
         COUNT(DISTINCT business_id) as active_businesses,
         COUNT(*) as total_transactions,
-        SUM(subtotal) as total_sales,
-        SUM(vat_amount) as total_vat_collected,
-        SUM(turnover_tax_amount) as total_turnover_tax_collected,
-        SUM(vat_amount + turnover_tax_amount + excise_tax_amount) as total_tax_collected,
-        SUM(total_amount) as total_revenue
+        COALESCE(SUM(subtotal), 0) as total_sales,
+        COALESCE(SUM(vat_amount), 0) as total_vat_collected,
+        COALESCE(SUM(turnover_tax_amount), 0) as total_turnover_tax_collected,
+        COALESCE(SUM(COALESCE(vat_amount, 0) + COALESCE(turnover_tax_amount, 0) + COALESCE(excise_tax_amount, 0)), 0) as total_tax_collected,
+        COALESCE(SUM(total_amount), 0) as total_revenue
       FROM sales
       ${dateFilter} AND status = 'completed'
     `).first()
@@ -160,7 +160,7 @@ app.get('/api/erca/tax-summary', async (c) => {
       SELECT 
         DATE(sale_date) as date,
         COUNT(*) as transactions,
-        SUM(vat_amount + turnover_tax_amount + excise_tax_amount) as tax_collected
+        COALESCE(SUM(COALESCE(vat_amount, 0) + COALESCE(turnover_tax_amount, 0) + COALESCE(excise_tax_amount, 0)), 0) as tax_collected
       FROM sales
       ${dateFilter} AND status = 'completed'
       GROUP BY DATE(sale_date)
@@ -173,6 +173,7 @@ app.get('/api/erca/tax-summary', async (c) => {
       daily_trend: dailyTrend
     })
   } catch (error: any) {
+    console.error('Error in /api/erca/tax-summary:', error)
     return c.json({ error: error.message }, 500)
   }
 })
