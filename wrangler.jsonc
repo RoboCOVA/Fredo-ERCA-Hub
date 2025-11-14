@@ -9,8 +9,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "fredo-taxpos-db",
-      "database_id": "local-db-id"
+      "database_name": "fredo-vpos-production",
+      "database_id": "5ff646b0-b678-46a2-98d0-6187f68c465c"
     }
   ]
 }
