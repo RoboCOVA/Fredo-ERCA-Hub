@@ -36,11 +36,18 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
    - Summary statistics cards
    - Period comparison metrics
 
+5. **Advanced Analytics Dashboard (Phase 3)**
+   - **Interactive Ethiopia Map**: Regional revenue visualization across all 13 regions
+   - **Business Type Analysis**: Revenue breakdown by restaurant, retail, electronics, etc.
+   - **Business Size Distribution**: Analytics for micro, small, medium, and large enterprises
+   - **Top Tax Contributors**: Ranking of highest-performing businesses
+   - **Monthly Revenue Trends**: Time-series visualization
+   - **Regional Breakdown**: Addis Ababa, Oromia, Amhara, and all regions
+
 ### 🔄 In Progress
 
 - Real-time data updates
-- Advanced analytics reports
-- Export functionality
+- Export functionality (PDF/Excel reports)
 
 ### ❌ Not Implemented
 
@@ -51,20 +58,29 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
 
 ## Access URLs
 
-### Local Development
-- **Dashboard**: http://localhost:3001
-- **API Base**: http://localhost:3001/api
+### Production (Cloudflare Pages) - ✅ DEPLOYED
+- **Dashboard**: https://27aea385.fredo-erca-hub.pages.dev
+- **Production Branch**: https://main.fredo-erca-hub.pages.dev
+- **API Base**: https://27aea385.fredo-erca-hub.pages.dev/api/erca
+- **Status**: ✅ Active with 7 registered businesses across 3 regions
 
 ### Sandbox Environment
 - **Dashboard**: https://3001-icd2jzp8cuk2tyhf9orx5-8f57ffe2.sandbox.novita.ai
+- **API Base**: https://3001-icd2jzp8cuk2tyhf9orx5-8f57ffe2.sandbox.novita.ai/api/erca
 
-### GitHub Repository
-- **Source Code**: https://github.com/RoboCOVA/Fredo-ERCA-Hub
-- **Download ZIP**: https://github.com/RoboCOVA/Fredo-ERCA-Hub/archive/refs/heads/main.zip
+### Local Development
+- **Dashboard**: http://localhost:3001
+- **API Base**: http://localhost:3001/api/erca
+
+### Related Applications
+- **Fredo vPOS (Business App)**: https://e5b4cb33.fredo-vpos.pages.dev
+- **GitHub Repository**: Project files available in sandbox environment
 
 ## API Endpoints
 
-### Tax Summary
+### Core Tax Monitoring
+
+#### Tax Summary
 ```bash
 GET /api/erca/tax-summary?period={today|week|month|year}
 ```
@@ -111,6 +127,121 @@ GET /api/erca/verify-invoice/{invoiceNumber}
 }
 ```
 
+### Business Monitoring
+
+#### List All Businesses
+```bash
+GET /api/erca/businesses
+```
+
+**Response**:
+```json
+{
+  "businesses": [
+    {
+      "id": 1,
+      "tin": "1234567890",
+      "business_name": "Addis Coffee House",
+      "city": "Addis Ababa",
+      "business_type": "restaurant",
+      "total_transactions": 0,
+      "total_revenue": 0,
+      "total_vat_collected": 0
+    }
+  ]
+}
+```
+
+#### Business Details by TIN
+```bash
+GET /api/erca/businesses/{tin}
+```
+
+### Advanced Analytics (Phase 3)
+
+#### Regional Revenue Breakdown
+```bash
+GET /api/erca/analytics/regional-revenue
+```
+
+**Response**:
+```json
+[
+  {
+    "region": "AA",
+    "region_name": "Addis Ababa",
+    "num_businesses": 2,
+    "num_transactions": 0,
+    "total_revenue": 0,
+    "total_tax": 0,
+    "avg_transaction_value": 0
+  }
+]
+```
+
+#### Business Type Analytics
+```bash
+GET /api/erca/analytics/business-type-revenue
+```
+
+**Response**:
+```json
+[
+  {
+    "business_type": "restaurant",
+    "category_name": "Restaurant/Café",
+    "icon": "fa-utensils",
+    "num_businesses": 2,
+    "total_revenue": 0,
+    "total_tax": 0
+  }
+]
+```
+
+#### Business Size Distribution
+```bash
+GET /api/erca/analytics/business-size-revenue
+```
+
+**Response**:
+```json
+[
+  {
+    "business_size": "small",
+    "size_name": "Small (500K-2M ETB)",
+    "num_businesses": 1,
+    "total_revenue": 0
+  }
+]
+```
+
+#### Top Tax Contributors
+```bash
+GET /api/erca/analytics/top-taxpayers?limit=20
+```
+
+#### Sector Breakdown
+```bash
+GET /api/erca/analytics/sector-breakdown
+```
+
+#### Monthly Trends
+```bash
+GET /api/erca/analytics/monthly-trends
+```
+
+### Compliance & Verification
+
+#### Sync Status
+```bash
+GET /api/erca/compliance/sync-status
+```
+
+#### Tax Filings
+```bash
+GET /api/erca/reports/tax-filings?status={draft|filed|paid|overdue}
+```
+
 ### Health Check
 ```bash
 GET /api/health
@@ -120,8 +251,9 @@ GET /api/health
 ```json
 {
   "status": "ok",
-  "service": "Fredo ERCA Hub",
-  "timestamp": "2024-11-14T16:00:00Z"
+  "app": "Fredo ERCA Hub",
+  "message": "Government Revenue Hub API is running",
+  "timestamp": "2025-11-15T12:00:00Z"
 }
 ```
 
@@ -129,8 +261,10 @@ GET /api/health
 
 ### Storage Services
 - **Cloudflare D1**: SQLite-based distributed database (shared with vPOS)
-- **Database Name**: `fredo-taxpos-db`
-- **Access Mode**: Read-only for ERCA Hub
+- **Database Name**: `fredo-vpos-production` (production) / `fredo-taxpos-db` (legacy local)
+- **Database ID**: `5ff646b0-b678-46a2-98d0-6187f68c465c`
+- **Access Mode**: Read-only for ERCA Hub (monitoring only)
+- **Architecture**: Shared database allows real-time system-wide monitoring
 
 ### Data Models
 
@@ -398,7 +532,25 @@ For issues, questions, or contributions:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: November 14, 2025  
-**Status**: ✅ Operational  
-**Deployment**: Local Development & Sandbox
+## Production Deployment Status
+
+**Version**: 2.0.0 (Phase 3 Complete)  
+**Last Updated**: November 15, 2025  
+**Status**: ✅ Fully Operational in Production  
+**Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development
+
+### Production Metrics (as of deployment):
+- **Total Businesses**: 7 registered businesses
+- **Regional Coverage**: 3 regions (Addis Ababa, Oromia, Amhara)
+- **Business Types**: Restaurants (2), Electronics (2), Retail (3)
+- **Business Sizes**: Small (1), Medium (1), Large (1), Others (4)
+- **Database**: Shared `fredo-vpos-production` D1 database
+- **Analytics**: Real-time regional, type, and size-based monitoring active
+
+### Phase 3 Achievements:
+✅ **Interactive Ethiopia Map** - All 13 regions visualized with revenue data  
+✅ **Business Classification** - 9 types × 4 sizes = 36 analytics segments  
+✅ **Regional Analytics** - Real-time monitoring across Ethiopian administrative divisions  
+✅ **Top Performers** - Ranked tax contributor leaderboards  
+✅ **Shared Database** - Seamless data flow from vPOS to ERCA Hub in production  
+✅ **Production Tested** - 3 test businesses created via onboarding wizard in production

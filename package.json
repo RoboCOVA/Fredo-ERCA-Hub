@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:sandbox": "wrangler pages dev dist --d1=fredo-taxpos-db --local --ip 0.0.0.0 --port 3001",
+    "dev:sandbox": "wrangler pages dev dist --d1=fredo-vpos-production --local --ip 0.0.0.0 --port 3001",
     "build": "vite build",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist --project-name fredo-erca-hub",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 migrations apply fredo-taxpos-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply fredo-taxpos-db",
+    "db:migrate:local": "wrangler d1 migrations apply fredo-vpos-production --local",
+    "db:migrate:prod": "wrangler d1 migrations apply fredo-vpos-production",
     "clean-port": "fuser -k 3001/tcp 2>/dev/null || true",
     "test": "curl http://localhost:3001/api/health"
   },

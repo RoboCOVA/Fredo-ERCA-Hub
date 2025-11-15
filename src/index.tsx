@@ -323,6 +323,81 @@ app.get('/api/erca/analytics/top-taxpayers', async (c) => {
   }
 })
 
+// Get regional revenue summary (using SQL views from fredo-vpos)
+app.get('/api/erca/analytics/regional-revenue', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const { results } = await DB.prepare(`
+      SELECT * FROM v_regional_revenue ORDER BY total_revenue DESC
+    `).all()
+    
+    return c.json(results)
+  } catch (error: any) {
+    console.error('Regional revenue error:', error)
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Get business type revenue summary
+app.get('/api/erca/analytics/business-type-revenue', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const { results } = await DB.prepare(`
+      SELECT * FROM v_business_type_revenue ORDER BY total_revenue DESC
+    `).all()
+    
+    return c.json(results)
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Get business size revenue summary
+app.get('/api/erca/analytics/business-size-revenue', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const { results } = await DB.prepare(`
+      SELECT * FROM v_business_size_revenue ORDER BY 
+        CASE business_size 
+          WHEN 'micro' THEN 1 
+          WHEN 'small' THEN 2 
+          WHEN 'medium' THEN 3 
+          WHEN 'large' THEN 4 
+        END
+    `).all()
+    
+    return c.json(results)
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Get monthly revenue trends
+app.get('/api/erca/analytics/monthly-trends', async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const { results } = await DB.prepare(`
+      SELECT 
+        strftime('%Y-%m', sale_date) as month,
+        SUM(total_amount) as total_revenue,
+        SUM(vat_amount + turnover_tax_amount + excise_tax_amount) as total_tax,
+        COUNT(*) as transaction_count
+      FROM sales
+      WHERE status = 'completed'
+      GROUP BY month
+      ORDER BY month ASC
+    `).all()
+    
+    return c.json(results)
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
 // ============================================
 // FRONTEND ROUTES
 // ============================================
@@ -349,6 +424,9 @@ app.get('/', (c) => {
                         <span class="text-xl font-bold">Ethiopian Revenue and Customs Authority</span>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <a href="/analytics" class="bg-purple-800 hover:bg-purple-600 px-4 py-2 rounded transition">
+                            <i class="fas fa-chart-line mr-2"></i>Analytics
+                        </a>
                         <select id="period-select" class="bg-purple-800 border-0 rounded px-3 py-1" onchange="loadERCADashboard()">
                             <option value="today">Today</option>
                             <option value="week">This Week</option>
@@ -460,6 +538,204 @@ app.get('/', (c) => {
         </div>
 
         <script src="/static/erca.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// ============================================
+// COMPREHENSIVE ANALYTICS DASHBOARD
+// ============================================
+
+app.get('/analytics', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ERCA Analytics Dashboard - National Revenue Monitoring</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Navigation -->
+        <nav class="bg-gradient-to-r from-purple-700 to-purple-900 text-white shadow-2xl">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-3xl mr-3"></i>
+                        <div>
+                            <span class="text-xl font-bold">Ethiopian Revenue and Customs Authority</span>
+                            <p class="text-xs text-purple-200">National Analytics Dashboard</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/" class="bg-purple-800 hover:bg-purple-600 px-4 py-2 rounded transition">
+                            <i class="fas fa-home mr-2"></i>Home
+                        </a>
+                        <button onclick="exportReport()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
+                            <i class="fas fa-file-excel mr-2"></i>Export Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-2">
+                    <i class="fas fa-chart-line text-purple-600 mr-3"></i>
+                    Comprehensive Tax Analytics
+                </h1>
+                <p class="text-gray-600 text-lg">Real-time monitoring of revenue collection across all Ethiopian regions and business sectors</p>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-purple-100 text-sm font-medium">Total Revenue</p>
+                            <p class="text-3xl font-bold" id="total-revenue">Loading...</p>
+                            <p class="text-xs text-purple-200 mt-1" id="tax-rate">Calculating...</p>
+                        </div>
+                        <i class="fas fa-coins text-6xl text-purple-300 opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-green-500 to-green-700 text-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-sm font-medium">Tax Collected</p>
+                            <p class="text-3xl font-bold" id="total-tax">Loading...</p>
+                            <p class="text-xs text-green-200 mt-1">All tax types combined</p>
+                        </div>
+                        <i class="fas fa-dollar-sign text-6xl text-green-300 opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm font-medium">Active Businesses</p>
+                            <p class="text-3xl font-bold" id="active-businesses">Loading...</p>
+                            <p class="text-xs text-blue-200 mt-1">Registered in system</p>
+                        </div>
+                        <i class="fas fa-building text-6xl text-blue-300 opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-orange-500 to-orange-700 text-white rounded-xl shadow-2xl p-6 transform hover:scale-105 transition">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-orange-100 text-sm font-medium">Total Transactions</p>
+                            <p class="text-3xl font-bold" id="total-transactions">Loading...</p>
+                            <p class="text-xs text-orange-200 mt-1" id="compliance-rate">Checking sync status...</p>
+                        </div>
+                        <i class="fas fa-exchange-alt text-6xl text-orange-300 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regional Revenue Heat Map -->
+            <div class="bg-white rounded-xl shadow-2xl p-6 mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                    <i class="fas fa-map-marked-alt text-purple-600 mr-2"></i>
+                    Regional Revenue Analysis
+                </h2>
+                
+                <!-- Interactive Ethiopia Map -->
+                <div id="ethiopia-interactive-map" class="mb-6"></div>
+                
+                <!-- Regional Heat Map Grid -->
+                <div id="regional-list" class="mt-6">
+                    <p class="text-gray-500 text-center py-8">Loading regional data...</p>
+                </div>
+            </div>
+
+            <!-- Business Analytics Charts -->
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <!-- Business Type Revenue Distribution -->
+                <div class="bg-white rounded-xl shadow-2xl p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-store text-purple-600 mr-2"></i>
+                        Revenue by Business Type
+                    </h3>
+                    <canvas id="business-type-chart"></canvas>
+                </div>
+
+                <!-- Business Size Analysis -->
+                <div class="bg-white rounded-xl shadow-2xl p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">
+                        <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
+                        Revenue by Business Size
+                    </h3>
+                    <canvas id="business-size-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Revenue Trends -->
+            <div class="bg-white rounded-xl shadow-2xl p-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-chart-line text-purple-600 mr-2"></i>
+                    Monthly Revenue & Tax Collection Trends
+                </h3>
+                <canvas id="revenue-trend-chart"></canvas>
+            </div>
+
+            <!-- Top Performing Businesses -->
+            <div class="bg-white rounded-xl shadow-2xl p-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                    Top Tax Contributors
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-purple-50">
+                            <tr>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Rank</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Business</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Location</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Transactions</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Tax Collected</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-businesses" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading top taxpayers...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Compliance Monitoring -->
+            <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-2xl p-6 border-2 border-purple-200">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-shield-alt text-purple-600 mr-2"></i>
+                    ERCA Sync Compliance Status
+                </h3>
+                <div id="compliance-alerts" class="space-y-3">
+                    <p class="text-gray-500">Loading compliance data...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-purple-900 text-white mt-12 py-6">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <p class="text-purple-200">© 2024 Ethiopian Revenue and Customs Authority</p>
+                <p class="text-sm text-purple-300 mt-1">Powered by Fredo vPOS Tax Compliance System</p>
+            </div>
+        </footer>
+
+        <script src="/static/ethiopia-map.js"></script>
+        <script src="/static/erca-hub-analytics.js"></script>
     </body>
     </html>
   `)
