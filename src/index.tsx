@@ -93,14 +93,19 @@ app.get('/api/erca/businesses/:tin', async (c) => {
   const tin = c.req.param('tin')
   
   try {
+    // Get business info with aggregated transaction data
     const business = await DB.prepare(`
       SELECT 
         b.*,
         COUNT(s.id) as total_transactions,
         COALESCE(SUM(s.total_amount), 0) as total_revenue,
-        COALESCE(SUM(s.vat_amount), 0) as total_vat_collected
+        COALESCE(SUM(s.vat_amount), 0) as total_vat_collected,
+        COALESCE(SUM(s.turnover_tax_amount), 0) as total_turnover_tax_collected,
+        COALESCE(SUM(s.excise_tax_amount), 0) as total_excise_tax_collected,
+        SUM(CASE WHEN s.erca_sync_status = 'synced' THEN 1 ELSE 0 END) as synced_transactions,
+        SUM(CASE WHEN s.erca_sync_status = 'pending' OR s.erca_sync_status IS NULL THEN 1 ELSE 0 END) as pending_transactions
       FROM businesses b
-      LEFT JOIN sales s ON b.id = s.business_id
+      LEFT JOIN sales s ON b.id = s.business_id AND s.status = 'completed'
       WHERE b.tin = ?
       GROUP BY b.id
     `).bind(tin).first()
@@ -109,7 +114,41 @@ app.get('/api/erca/businesses/:tin', async (c) => {
       return c.json({ error: 'Business not found' }, 404)
     }
     
-    return c.json(business)
+    // Get recent transactions
+    const { results: recentTransactions } = await DB.prepare(`
+      SELECT 
+        id,
+        invoice_number,
+        sale_date,
+        total_amount,
+        vat_amount,
+        erca_sync_status,
+        erca_synced_at
+      FROM sales
+      WHERE business_id = (SELECT id FROM businesses WHERE tin = ?)
+      ORDER BY sale_date DESC
+      LIMIT 10
+    `).bind(tin).all()
+    
+    // Get monthly transaction trend (last 6 months)
+    const { results: monthlyTrend } = await DB.prepare(`
+      SELECT 
+        strftime('%Y-%m', sale_date) as month,
+        COUNT(*) as transaction_count,
+        COALESCE(SUM(total_amount), 0) as revenue,
+        COALESCE(SUM(vat_amount), 0) as vat_collected
+      FROM sales
+      WHERE business_id = (SELECT id FROM businesses WHERE tin = ?)
+        AND sale_date >= DATE('now', '-6 months')
+      GROUP BY strftime('%Y-%m', sale_date)
+      ORDER BY month DESC
+    `).bind(tin).all()
+    
+    return c.json({
+      business,
+      recentTransactions,
+      monthlyTrend
+    })
   } catch (error: any) {
     return c.json({ error: error.message }, 500)
   }
@@ -2376,6 +2415,319 @@ app.get('/business-monitoring', (c) => {
 
         <script src="/static/erca-auth.js"></script>
         <script src="/static/business-monitoring.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// Business Profile/Details Page
+app.get('/business-details', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Business Profile - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Navigation -->
+        <nav class="bg-gradient-to-r from-blue-800 to-blue-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <span class="text-xl font-bold">ERCA - Business Profile</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/business-monitoring" class="hover:text-blue-200">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to Monitoring
+                        </a>
+                        <a href="/erca-dashboard" class="hover:text-blue-200">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" class="hover:text-blue-200">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Loading State -->
+            <div id="loading-state" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Loading business profile...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="hidden">
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                    <p id="error-message"></p>
+                </div>
+                <a href="/business-monitoring" class="text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Business Monitoring
+                </a>
+            </div>
+
+            <!-- Business Profile Content -->
+            <div id="profile-content" class="hidden">
+                <!-- Header with Business Name and Status -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-blue-100 rounded-full p-4">
+                                <i class="fas fa-building text-3xl text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900" id="business-name">...</h1>
+                                <p class="text-gray-600" id="business-subtitle">...</p>
+                            </div>
+                        </div>
+                        <div id="sync-status-badge" class="text-right">
+                            <!-- Status badge will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Statistics -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Total Transactions</p>
+                                <p class="text-2xl font-bold text-gray-900" id="stat-transactions">0</p>
+                            </div>
+                            <div class="bg-blue-100 rounded-full p-3">
+                                <i class="fas fa-receipt text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Total Revenue</p>
+                                <p class="text-2xl font-bold text-gray-900" id="stat-revenue">ETB 0</p>
+                            </div>
+                            <div class="bg-green-100 rounded-full p-3">
+                                <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">VAT Collected</p>
+                                <p class="text-2xl font-bold text-gray-900" id="stat-vat">ETB 0</p>
+                            </div>
+                            <div class="bg-purple-100 rounded-full p-3">
+                                <i class="fas fa-percentage text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Compliance Rate</p>
+                                <p class="text-2xl font-bold text-gray-900" id="stat-compliance">0%</p>
+                            </div>
+                            <div class="bg-yellow-100 rounded-full p-3">
+                                <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="bg-white rounded-lg shadow mb-6">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex -mb-px">
+                            <button onclick="switchTab('overview')" 
+                                    class="tab-btn border-b-2 border-blue-500 text-blue-600 py-4 px-6 font-semibold"
+                                    id="tab-overview">
+                                <i class="fas fa-info-circle mr-2"></i>Overview
+                            </button>
+                            <button onclick="switchTab('contact')" 
+                                    class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-6 font-semibold"
+                                    id="tab-contact">
+                                <i class="fas fa-address-card mr-2"></i>Contact & Location
+                            </button>
+                            <button onclick="switchTab('tax')" 
+                                    class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-6 font-semibold"
+                                    id="tab-tax">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i>Tax Information
+                            </button>
+                            <button onclick="switchTab('activity')" 
+                                    class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-6 font-semibold"
+                                    id="tab-activity">
+                                <i class="fas fa-chart-bar mr-2"></i>Transaction Activity
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="p-6">
+                        <!-- Overview Tab -->
+                        <div id="content-overview" class="tab-content">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Business Overview</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">TIN</p>
+                                    <p class="text-lg font-semibold text-gray-900 font-mono" id="info-tin">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Business Type</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-type">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Business Size</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-size">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Number of Employees</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-employees">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Trade License Number</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-license">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Registration Date</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-registered">...</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm text-gray-600 mb-1">Operating Hours</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="info-hours">...</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm text-gray-600 mb-1">Subscription Status</p>
+                                    <div id="info-subscription">...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Tab -->
+                        <div id="content-contact" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Contact Information & Location</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Phone Number</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-phone">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Email Address</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-email">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Region</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-region">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">City</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-city">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Sub-City</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-subcity">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Kebele</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-kebele">...</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm text-gray-600 mb-1">Street Address</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-street">...</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm text-gray-600 mb-1">Full Address</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="contact-full">...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tax Tab -->
+                        <div id="content-tax" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Tax Configuration & Compliance</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Tax Type</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="tax-type">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">VAT Rate</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="tax-vat-rate">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Turnover Tax Rate</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="tax-turnover-rate">...</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">ERCA Sync Status</p>
+                                    <div id="tax-sync-status">...</div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm text-gray-600 mb-1">Total Tax Collected (All Time)</p>
+                                    <p class="text-2xl font-bold text-green-600" id="tax-total-collected">ETB 0</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Synced Transactions</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="tax-synced">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Pending Sync</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="tax-pending">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Tab -->
+                        <div id="content-activity" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Transaction Activity</h3>
+                            
+                            <!-- Activity Chart -->
+                            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                                <canvas id="activity-chart" height="80"></canvas>
+                            </div>
+
+                            <!-- Recent Transactions -->
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Recent Transactions</h4>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">VAT</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-transactions" class="bg-white divide-y divide-gray-200">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                                Loading transactions...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/business-profile.js"></script>
     </body>
     </html>
   `)
