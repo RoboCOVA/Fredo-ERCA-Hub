@@ -948,6 +948,12 @@ app.get('/erca-dashboard', (c) => {
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <a href="/erca-profile" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-user-circle mr-1"></i>Profile
+                        </a>
+                        <a href="/erca-audit-logs" class="text-purple-200 hover:text-white" id="audit-logs-link">
+                            <i class="fas fa-history mr-1"></i>Audit Logs
+                        </a>
                         <div class="text-right">
                             <p class="text-sm font-semibold" id="official-name">Loading...</p>
                             <p class="text-xs text-purple-200" id="official-rank">Loading...</p>
@@ -1024,7 +1030,7 @@ app.get('/erca-dashboard', (c) => {
 
             <!-- Filters and Actions -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                <div class="grid md:grid-cols-4 gap-4">
+                <div class="grid md:grid-cols-5 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
                         <input type="text" id="search-input" placeholder="Name, ID, or email..." 
@@ -1046,6 +1052,12 @@ app.get('/erca-dashboard', (c) => {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="exportOfficialsToCSV()" 
+                                class="w-full bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition">
+                            <i class="fas fa-file-csv mr-2"></i>Export CSV
+                        </button>
                     </div>
                     <div class="flex items-end">
                         <button onclick="openAddModal()" 
@@ -1170,7 +1182,414 @@ app.get('/erca-dashboard', (c) => {
             const official = ercaAuth.getCurrentOfficial()
             document.getElementById('official-name').textContent = official.full_name
             document.getElementById('official-rank').textContent = official.rank_name + ' | ' + official.department
+            
+            // Hide audit logs link if not super admin
+            if (!ercaAuth.isSuperAdmin()) {
+              const auditLogsLink = document.getElementById('audit-logs-link')
+              if (auditLogsLink) auditLogsLink.style.display = 'none'
+            }
           }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+// ERCA Audit Logs Viewer
+app.get('/erca-audit-logs', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Audit Logs - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Top Navigation -->
+        <nav class="bg-purple-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">Audit Logs</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/erca-dashboard" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" 
+                                class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">
+                    <i class="fas fa-history text-purple-600 mr-2"></i>
+                    System Audit Logs
+                </h2>
+                <p class="text-gray-600 mt-2">Complete audit trail of all official actions</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Total Logs</p>
+                            <p class="text-3xl font-bold text-gray-900" id="total-logs">0</p>
+                        </div>
+                        <div class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-list text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Unique Officials</p>
+                            <p class="text-3xl font-bold text-blue-600" id="unique-officials">0</p>
+                        </div>
+                        <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-users text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Action Types</p>
+                            <p class="text-3xl font-bold text-green-600" id="total-actions">0</p>
+                        </div>
+                        <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-tasks text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Most Common</p>
+                            <p class="text-sm font-semibold text-gray-700" id="common-action">Loading...</p>
+                        </div>
+                        <div class="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-chart-bar text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Actions -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <div class="grid md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <input type="text" id="search-input" placeholder="Official name or ID..." 
+                               onkeyup="filterLogs()"
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Action Filter</label>
+                        <select id="action-filter" onchange="filterLogs()"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">All Actions</option>
+                            <option value="login">Login</option>
+                            <option value="logout">Logout</option>
+                            <option value="create_user">Create User</option>
+                            <option value="update_user">Update User</option>
+                            <option value="view_business">View Business</option>
+                            <option value="verify_invoice">Verify Invoice</option>
+                            <option value="generate_report">Generate Report</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date Filter</label>
+                        <input type="date" id="date-filter" onchange="filterLogs()"
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Limit</label>
+                        <select id="limit-select" onchange="loadMoreLogs()"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="100">100 logs</option>
+                            <option value="200">200 logs</option>
+                            <option value="500">500 logs</option>
+                            <option value="1000">1000 logs</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="exportToCSV()" 
+                                class="w-full bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition">
+                            <i class="fas fa-file-csv mr-2"></i>Export CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Logs Table -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Official</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-logs-table" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                                    Loading audit logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/erca-audit-logs.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// ERCA Profile Management
+app.get('/erca-profile', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>My Profile - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Top Navigation -->
+        <nav class="bg-purple-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">My Profile</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/erca-dashboard" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" 
+                                class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Profile Header -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 h-32"></div>
+                <div class="px-6 pb-6">
+                    <div class="-mt-16 mb-4">
+                        <div class="w-32 h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+                            <span class="text-5xl font-bold text-purple-600" id="profile-initial">?</span>
+                        </div>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900" id="profile-name">Loading...</h2>
+                    <p class="text-gray-600" id="profile-rank">Loading...</p>
+                    <div class="mt-4 flex items-center space-x-4 text-sm text-gray-600">
+                        <span><i class="fas fa-id-badge mr-1"></i><span id="profile-employee-id">-</span></span>
+                        <span><i class="fas fa-building mr-1"></i><span id="profile-department">-</span></span>
+                        <span><i class="fas fa-map-marker-alt mr-1"></i><span id="profile-region">-</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Details -->
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-user text-purple-600 mr-2"></i>
+                        Personal Information
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm text-gray-500">Full Name</label>
+                            <p class="font-semibold text-gray-900" id="info-name">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Employee ID</label>
+                            <p class="font-semibold text-gray-900" id="info-employee-id">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Email</label>
+                            <p class="font-semibold text-gray-900" id="info-email">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Phone</label>
+                            <p class="font-semibold text-gray-900" id="info-phone">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-briefcase text-purple-600 mr-2"></i>
+                        Official Information
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm text-gray-500">Rank</label>
+                            <p class="font-semibold text-gray-900" id="info-rank">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Department</label>
+                            <p class="font-semibold text-gray-900" id="info-department">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Region</label>
+                            <p class="font-semibold text-gray-900" id="info-region">-</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">Office Location</label>
+                            <p class="font-semibold text-gray-900" id="info-office">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password Section -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    <i class="fas fa-key text-purple-600 mr-2"></i>
+                    Change Password
+                </h3>
+                <form id="password-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <input type="password" id="current-password" required
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="new-password" required minlength="8"
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirm-password" required minlength="8"
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <button type="submit" id="change-password-btn"
+                            class="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 transition">
+                        <i class="fas fa-save mr-2"></i>Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script>
+          let currentOfficial = null
+
+          // Load profile data
+          async function loadProfile() {
+            const isAuth = await ercaAuth.requireAuth()
+            if (!isAuth) return
+
+            currentOfficial = ercaAuth.getCurrentOfficial()
+
+            // Update profile display
+            document.getElementById('profile-initial').textContent = currentOfficial.full_name.charAt(0).toUpperCase()
+            document.getElementById('profile-name').textContent = currentOfficial.full_name
+            document.getElementById('profile-rank').textContent = currentOfficial.rank_name
+            document.getElementById('profile-employee-id').textContent = currentOfficial.employee_id
+            document.getElementById('profile-department').textContent = currentOfficial.department || 'N/A'
+            document.getElementById('profile-region').textContent = currentOfficial.region || 'N/A'
+
+            // Update info section
+            document.getElementById('info-name').textContent = currentOfficial.full_name
+            document.getElementById('info-employee-id').textContent = currentOfficial.employee_id
+            document.getElementById('info-email').textContent = currentOfficial.email
+            document.getElementById('info-phone').textContent = currentOfficial.phone || 'N/A'
+            document.getElementById('info-rank').textContent = currentOfficial.rank_name
+            document.getElementById('info-department').textContent = currentOfficial.department || 'N/A'
+            document.getElementById('info-region').textContent = currentOfficial.region || 'N/A'
+            document.getElementById('info-office').textContent = currentOfficial.office_location || 'N/A'
+          }
+
+          // Handle password change
+          document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault()
+
+            const currentPassword = document.getElementById('current-password').value
+            const newPassword = document.getElementById('new-password').value
+            const confirmPassword = document.getElementById('confirm-password').value
+
+            if (newPassword !== confirmPassword) {
+              alert('New passwords do not match!')
+              return
+            }
+
+            const btn = document.getElementById('change-password-btn')
+            btn.disabled = true
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Changing...'
+
+            try {
+              const response = await axios.post('/api/erca/auth/change-password', {
+                employee_id: currentOfficial.employee_id,
+                current_password: currentPassword,
+                new_password: newPassword
+              }, {
+                headers: { 'Authorization': \`Bearer \${ercaAuth.getSessionToken()}\` }
+              })
+
+              if (response.data.success) {
+                alert('Password changed successfully! Please login again.')
+                ercaAuth.logout()
+              } else {
+                alert(response.data.error || 'Failed to change password')
+                btn.disabled = false
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i>Change Password'
+              }
+            } catch (error) {
+              alert(error.response?.data?.error || 'Error changing password')
+              btn.disabled = false
+              btn.innerHTML = '<i class="fas fa-save mr-2"></i>Change Password'
+            }
+          })
+
+          // Initialize
+          loadProfile()
         </script>
     </body>
     </html>
@@ -1599,6 +2018,61 @@ app.get('/api/erca/admin/audit-logs', async (c) => {
     `).bind(limit).all()
     
     return c.json({ logs: results })
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Change Password
+app.post('/api/erca/auth/change-password', async (c) => {
+  const { DB } = c.env
+  const auth_token = c.req.header('Authorization')?.replace('Bearer ', '')
+  const { employee_id, current_password, new_password } = await c.req.json()
+  
+  try {
+    // Validate session
+    const session: any = await DB.prepare(`
+      SELECT o.id
+      FROM erca_sessions s
+      JOIN erca_officials o ON s.official_id = o.id
+      WHERE s.session_token = ? AND o.is_active = 1 AND s.expires_at > datetime('now')
+    `).bind(auth_token).first()
+    
+    if (!session) {
+      return c.json({ error: 'Unauthorized' }, 403)
+    }
+    
+    // Verify current password
+    const current_password_hash = await hashPassword(current_password)
+    const official: any = await DB.prepare(`
+      SELECT id FROM erca_officials 
+      WHERE employee_id = ? AND password_hash = ?
+    `).bind(employee_id, current_password_hash).first()
+    
+    if (!official) {
+      return c.json({ error: 'Current password is incorrect' }, 401)
+    }
+    
+    // Update password
+    const new_password_hash = await hashPassword(new_password)
+    await DB.prepare(`
+      UPDATE erca_officials 
+      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(new_password_hash, official.id).run()
+    
+    // Log audit trail
+    await DB.prepare(`
+      INSERT INTO erca_audit_log (official_id, action, details)
+      VALUES (?, 'password_change', '{"success":true}')
+    `).bind(session.id).run()
+    
+    // Delete all sessions for this user (force re-login)
+    await DB.prepare(`
+      DELETE FROM erca_sessions WHERE official_id = ?
+    `).bind(official.id).run()
+    
+    return c.json({ success: true, message: 'Password changed successfully' })
   } catch (error: any) {
     return c.json({ error: error.message }, 500)
   }

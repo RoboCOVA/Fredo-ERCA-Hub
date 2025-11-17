@@ -353,6 +353,43 @@ function filterOfficials() {
   }
 }
 
+// Export officials to CSV
+function exportOfficialsToCSV() {
+  const headers = ['Employee ID', 'Full Name', 'Email', 'Phone', 'Rank', 'Department', 'Region', 'Office Location', 'Status', 'Super Admin', 'Last Login']
+  
+  const rows = officials.map(official => [
+    official.employee_id,
+    official.full_name,
+    official.email,
+    official.phone,
+    official.rank_name,
+    official.department || '',
+    official.region || '',
+    official.office_location || '',
+    official.is_active ? 'Active' : 'Inactive',
+    official.is_super_admin ? 'Yes' : 'No',
+    official.last_login_at ? new Date(official.last_login_at).toLocaleString() : 'Never'
+  ])
+  
+  let csv = headers.join(',') + '\\n'
+  rows.forEach(row => {
+    csv += row.map(field => `"${field}"`).join(',') + '\\n'
+  })
+  
+  // Download CSV
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `erca-officials-${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(url)
+  
+  showNotification('Officials exported successfully', 'success')
+}
+
 // Show notification
 function showNotification(message, type = 'info', duration = 5000) {
   const notification = document.createElement('div')
