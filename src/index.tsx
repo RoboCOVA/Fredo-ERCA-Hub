@@ -2197,4 +2197,331 @@ app.get('/verify-invoice', (c) => {
   `)
 })
 
+// Business Monitoring Dashboard
+app.get('/business-monitoring', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Business Monitoring - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Top Navigation -->
+        <nav class="bg-purple-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">Business Monitoring</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/erca-dashboard" class="hover:bg-purple-800 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Page Header -->
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    <i class="fas fa-building text-purple-600 mr-2"></i>
+                    Business Monitoring
+                </h1>
+                <p class="text-gray-600">Real-time monitoring of all registered businesses with transaction data and compliance status</p>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Businesses</p>
+                            <p id="total-businesses" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                        <i class="fas fa-building text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Active</p>
+                            <p id="active-businesses" class="text-2xl font-bold text-green-600">0</p>
+                        </div>
+                        <i class="fas fa-check-circle text-3xl text-green-400"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Revenue</p>
+                            <p id="total-revenue" class="text-xl font-bold text-gray-900">ETB 0</p>
+                        </div>
+                        <i class="fas fa-dollar-sign text-3xl text-indigo-400"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total VAT</p>
+                            <p id="total-vat" class="text-xl font-bold text-gray-900">ETB 0</p>
+                        </div>
+                        <i class="fas fa-coins text-3xl text-yellow-400"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Transactions</p>
+                            <p id="total-transactions" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                        <i class="fas fa-exchange-alt text-3xl text-blue-400"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Avg Compliance</p>
+                            <p id="avg-compliance" class="text-2xl font-bold text-gray-900">0%</p>
+                        </div>
+                        <i class="fas fa-chart-line text-3xl text-purple-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Actions -->
+            <div class="bg-white rounded-lg shadow mb-6 p-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex-1 min-w-64">
+                        <input 
+                            type="text" 
+                            id="filter-input" 
+                            placeholder="Search by name, TIN, city, or type..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                    </div>
+                    <div>
+                        <select 
+                            id="compliance-filter"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                            <option value="all">All Compliance Levels</option>
+                            <option value="compliant">Compliant (≥95%)</option>
+                            <option value="partial">Partial (70-94%)</option>
+                            <option value="non-compliant">Non-Compliant (<70%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button 
+                            onclick="exportToCSV()"
+                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                        >
+                            <i class="fas fa-file-csv mr-2"></i>
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <p id="results-count" class="text-sm text-gray-600">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="bg-white rounded-lg shadow p-8 text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-4"></i>
+                <p class="text-gray-600">Loading businesses...</p>
+            </div>
+
+            <!-- Businesses Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIN</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Transactions</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">VAT</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compliance</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="businesses-tbody" class="bg-white divide-y divide-gray-200">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/business-monitoring.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// Compliance Report Page
+app.get('/compliance-report', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Compliance Report - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <style>
+          @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+          }
+        </style>
+    </head>
+    <body class="bg-gray-100">
+        <nav class="bg-purple-900 text-white shadow-lg no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">Compliance Report</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/erca-dashboard" class="hover:bg-purple-800 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="mb-6 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                        <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+                        Tax Compliance Report
+                    </h1>
+                    <p class="text-gray-600">Businesses categorized by compliance rates</p>
+                </div>
+                <div class="flex items-center space-x-4 no-print">
+                    <select id="period-selector" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="day">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month" selected>This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <button onclick="exportReport()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        <i class="fas fa-file-csv mr-2"></i> Export
+                    </button>
+                    <button onclick="printReport()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                        <i class="fas fa-print mr-2"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Total</p>
+                    <p id="total-businesses" class="text-2xl font-bold text-gray-900">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Compliant</p>
+                    <p id="compliant-count" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Partial</p>
+                    <p id="partial-count" class="text-2xl font-bold text-yellow-600">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Non-Compliant</p>
+                    <p id="non-compliant-count" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Total Revenue</p>
+                    <p id="total-revenue" class="text-xl font-bold text-gray-900">ETB 0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Total VAT</p>
+                    <p id="total-vat" class="text-xl font-bold text-gray-900">ETB 0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600">Avg Compliance</p>
+                    <p id="overall-compliance" class="text-2xl font-bold text-purple-600">0%</p>
+                </div>
+            </div>
+
+            <div id="loading-state" class="bg-white rounded-lg shadow p-8 text-center mb-6">
+                <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-4"></i>
+                <p class="text-gray-600">Loading compliance data...</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-green-50">
+                        <h3 class="text-lg font-semibold text-green-800">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Compliant (≥95%)
+                        </h3>
+                    </div>
+                    <div id="compliant-list" class="p-6 space-y-4"></div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-yellow-50">
+                        <h3 class="text-lg font-semibold text-yellow-800">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Partial (70-94%)
+                        </h3>
+                    </div>
+                    <div id="partial-list" class="p-6 space-y-4"></div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-red-50">
+                        <h3 class="text-lg font-semibold text-red-800">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Non-Compliant (<70%)
+                        </h3>
+                    </div>
+                    <div id="non-compliant-list" class="p-6 space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/compliance-report.js"></script>
+    </body>
+    </html>
+  `)
+})
+
 export default app
