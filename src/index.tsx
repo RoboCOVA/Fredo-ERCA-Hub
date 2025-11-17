@@ -742,6 +742,442 @@ app.get('/analytics', (c) => {
 })
 
 // ============================================
+// ERCA FRONTEND PAGES
+// ============================================
+
+// ERCA Login Page
+app.get('/erca-login', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ERCA Official Login - Ethiopian Revenue Hub</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full">
+            <!-- Logo and Header -->
+            <div class="text-center mb-8">
+                <div class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                    <i class="fas fa-landmark text-purple-900 text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">ERCA Official Portal</h1>
+                <p class="text-purple-200">Ethiopian Revenue and Customs Authority</p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    <i class="fas fa-user-shield text-purple-600 mr-2"></i>
+                    Official Login
+                </h2>
+
+                <form id="login-form" class="space-y-6">
+                    <!-- Employee ID -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-id-card mr-1"></i>
+                            Employee ID
+                        </label>
+                        <input type="text" id="employee-id" required
+                               placeholder="e.g., ERCA001"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-1"></i>
+                            Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="password" required
+                                   placeholder="Enter your password"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10">
+                            <button type="button" onclick="togglePassword()" 
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <i id="password-icon" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span id="error-text"></span>
+                    </div>
+
+                    <!-- Login Button -->
+                    <button type="submit" id="login-btn"
+                            class="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition flex items-center justify-center">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Login to ERCA System
+                    </button>
+                </form>
+
+                <!-- Additional Info -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <p class="text-center text-sm text-gray-600">
+                        <i class="fas fa-shield-alt text-green-600 mr-1"></i>
+                        Secure Government Portal
+                    </p>
+                    <p class="text-center text-xs text-gray-500 mt-2">
+                        For authorized ERCA officials only
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6">
+                <p class="text-purple-200 text-sm">
+                    © 2024 Ethiopian Revenue and Customs Authority
+                </p>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script>
+          // Toggle password visibility
+          function togglePassword() {
+            const passwordInput = document.getElementById('password')
+            const passwordIcon = document.getElementById('password-icon')
+            
+            if (passwordInput.type === 'password') {
+              passwordInput.type = 'text'
+              passwordIcon.classList.remove('fa-eye')
+              passwordIcon.classList.add('fa-eye-slash')
+            } else {
+              passwordInput.type = 'password'
+              passwordIcon.classList.remove('fa-eye-slash')
+              passwordIcon.classList.add('fa-eye')
+            }
+          }
+
+          // Show error message
+          function showError(message) {
+            const errorDiv = document.getElementById('error-message')
+            const errorText = document.getElementById('error-text')
+            errorText.textContent = message
+            errorDiv.classList.remove('hidden')
+          }
+
+          // Hide error message
+          function hideError() {
+            document.getElementById('error-message').classList.add('hidden')
+          }
+
+          // Handle login form submission
+          document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            hideError()
+
+            const loginBtn = document.getElementById('login-btn')
+            const employeeId = document.getElementById('employee-id').value.trim()
+            const password = document.getElementById('password').value
+
+            // Validate inputs
+            if (!employeeId || !password) {
+              showError('Please enter both Employee ID and Password')
+              return
+            }
+
+            // Disable button and show loading
+            loginBtn.disabled = true
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Logging in...'
+
+            try {
+              const result = await ercaAuth.login(employeeId, password)
+
+              if (result.success) {
+                // Redirect based on URL parameter or default to dashboard
+                const urlParams = new URLSearchParams(window.location.search)
+                const redirect = urlParams.get('redirect') || '/erca-dashboard'
+                window.location.href = redirect
+              } else {
+                showError(result.error || 'Invalid credentials')
+                loginBtn.disabled = false
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login to ERCA System'
+              }
+            } catch (error) {
+              console.error('Login error:', error)
+              showError('An error occurred. Please try again.')
+              loginBtn.disabled = false
+              loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Login to ERCA System'
+            }
+          })
+
+          // Check if already logged in
+          if (ercaAuth.isLoggedIn()) {
+            const urlParams = new URLSearchParams(window.location.search)
+            const redirect = urlParams.get('redirect') || '/erca-dashboard'
+            window.location.href = redirect
+          }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+// ERCA User Management Dashboard
+app.get('/erca-dashboard', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>User Management - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Top Navigation -->
+        <nav class="bg-purple-900 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">User Management System</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <p class="text-sm font-semibold" id="official-name">Loading...</p>
+                            <p class="text-xs text-purple-200" id="official-rank">Loading...</p>
+                        </div>
+                        <button onclick="ercaAuth.logout()" 
+                                class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">
+                    <i class="fas fa-users-cog text-purple-600 mr-2"></i>
+                    ERCA Officials Management
+                </h2>
+                <p class="text-gray-600 mt-2">Manage government officials and their permissions</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Total Officials</p>
+                            <p class="text-3xl font-bold text-gray-900" id="total-officials">0</p>
+                        </div>
+                        <div class="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-users text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Active Officials</p>
+                            <p class="text-3xl font-bold text-green-600" id="active-officials">0</p>
+                        </div>
+                        <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-check text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Super Admins</p>
+                            <p class="text-3xl font-bold text-yellow-600" id="super-admins">0</p>
+                        </div>
+                        <div class="bg-yellow-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-crown text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm mb-1">Rank Distribution</p>
+                            <p class="text-xs font-semibold text-gray-700" id="rank-distribution">Loading...</p>
+                        </div>
+                        <div class="bg-indigo-100 w-12 h-12 rounded-full flex items-center justify-center">
+                            <i class="fas fa-sitemap text-indigo-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Actions -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <div class="grid md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <input type="text" id="search-input" placeholder="Name, ID, or email..." 
+                               onkeyup="filterOfficials()"
+                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rank Filter</label>
+                        <select id="rank-filter" onchange="filterOfficials()"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">All Ranks</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status Filter</label>
+                        <select id="status-filter" onchange="filterOfficials()"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="openAddModal()" 
+                                class="w-full bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 transition">
+                            <i class="fas fa-plus mr-2"></i>Add Official
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Officials Table -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Official</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="officials-table" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                                    Loading officials...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Official Modal -->
+        <div id="official-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="bg-purple-600 text-white px-6 py-4 rounded-t-2xl">
+                    <h3 class="text-xl font-bold" id="modal-title">Add New ERCA Official</h3>
+                </div>
+                
+                <form id="official-form" onsubmit="saveOfficial(event)" class="p-6">
+                    <input type="hidden" id="official-id">
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                            <input type="text" id="official-full-name" required
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Employee ID *</label>
+                            <input type="text" id="official-employee-id" required
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" id="official-email" required
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                            <input type="tel" id="official-phone" required placeholder="+251911000000"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rank *</label>
+                            <select id="official-rank" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                            <select id="official-department"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                            <input type="text" id="official-region" placeholder="e.g., Addis Ababa"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Office Location</label>
+                            <input type="text" id="official-office" placeholder="e.g., Main Office"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="closeModal()"
+                                class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 transition">
+                            Save Official
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/erca-user-management.js"></script>
+        <script>
+          // Update user info in header
+          if (ercaAuth.isLoggedIn()) {
+            const official = ercaAuth.getCurrentOfficial()
+            document.getElementById('official-name').textContent = official.full_name
+            document.getElementById('official-rank').textContent = official.rank_name + ' | ' + official.department
+          }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+// ============================================
 // ERCA USER MANAGEMENT SYSTEM
 // ============================================
 
