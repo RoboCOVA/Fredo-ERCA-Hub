@@ -2078,4 +2078,123 @@ app.post('/api/erca/auth/change-password', async (c) => {
   }
 })
 
+// Invoice Verification Page
+app.get('/verify-invoice', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invoice Verification - ERCA Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <style>
+          @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+          }
+        </style>
+    </head>
+    <body class="bg-gray-100">
+        <!-- Top Navigation -->
+        <nav class="bg-purple-900 text-white shadow-lg no-print">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-landmark text-2xl mr-3"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">Invoice Verification</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/erca-dashboard" class="hover:bg-purple-800 px-3 py-2 rounded-md text-sm">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <button onclick="ercaAuth.logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Page Header -->
+            <div class="mb-8 no-print">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    <i class="fas fa-search text-purple-600 mr-2"></i>
+                    Invoice Verification
+                </h1>
+                <p class="text-gray-600">Verify the authenticity of business invoices registered with ERCA</p>
+            </div>
+
+            <!-- Search Form -->
+            <div class="bg-white rounded-lg shadow-lg p-8 mb-6 no-print">
+                <form id="verify-form" class="max-w-2xl mx-auto">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1">
+                            <label for="invoice-number" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-file-invoice mr-1"></i>
+                                Enter Invoice Number
+                            </label>
+                            <input 
+                                type="text" 
+                                id="invoice-number" 
+                                name="invoice_number"
+                                placeholder="INV-20251117-0001"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+                                required
+                                autofocus
+                            >
+                        </div>
+                        <div class="pt-7">
+                            <button 
+                                type="submit"
+                                class="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                            >
+                                <i class="fas fa-search mr-2"></i>
+                                Verify
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Invoice numbers are case-sensitive. Format: INV-YYYYMMDD-XXXX
+                    </p>
+                </form>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="hidden text-center py-12">
+                <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-4"></i>
+                <p class="text-gray-600">Verifying invoice...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="hidden bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-4"></i>
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-800">Invoice Not Found</h3>
+                        <p class="text-red-700 mt-1">Error message will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Results -->
+            <div id="verification-results" class="hidden">
+                <!-- Results will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <script src="/static/erca-auth.js"></script>
+        <script src="/static/invoice-verification.js"></script>
+    </body>
+    </html>
+  `)
+})
+
 export default app
