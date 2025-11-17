@@ -6,7 +6,9 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
 
 **Name**: Fredo ERCA Revenue Hub  
 **Purpose**: Central tax compliance monitoring dashboard for Ethiopian tax authorities  
-**Type**: Read-only analytics and verification dashboard
+**Type**: Government portal with user management, analytics, verification, and compliance monitoring  
+**Production URL**: https://4797ad2f.fredo-erca-hub.pages.dev  
+**Integrated with**: Fredo vPOS (https://28df9da6.fredo-vpos.pages.dev)
 
 ## Features Status
 
