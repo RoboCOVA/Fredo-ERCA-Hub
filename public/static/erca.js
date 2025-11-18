@@ -104,14 +104,18 @@ async function loadBusinessesTable() {
     const tbody = document.getElementById('businesses-table');
     
     if (businesses.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No businesses registered</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No businesses registered</td></tr>';
       return;
     }
     
     tbody.innerHTML = businesses.map(business => `
       <tr class="hover:bg-gray-50">
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${business.tin}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${business.business_name}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <a href="/business-details?tin=${business.tin}" class="text-blue-600 hover:text-blue-800 hover:underline font-semibold">
+            ${business.business_name}
+          </a>
+        </td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${business.city}</td>
         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
@@ -124,6 +128,11 @@ async function loadBusinessesTable() {
         </td>
         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">
           ${formatCurrency(business.total_vat_collected)}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+          <a href="/business-details?tin=${business.tin}" class="text-indigo-600 hover:text-indigo-900 font-semibold">
+            <i class="fas fa-eye mr-1"></i> View
+          </a>
         </td>
       </tr>
     `).join('');
