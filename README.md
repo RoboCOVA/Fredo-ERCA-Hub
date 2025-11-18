@@ -87,15 +87,16 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Login**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-login
-- **Officials Manager**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-dashboard
-- **Analytics Dashboard**: https://c71cc7b8.fredo-erca-hub.pages.dev/analytics
-- **Audit Logs**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-audit-logs
-- **Profile**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-profile
-- **Invoice Verification**: https://c71cc7b8.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://c71cc7b8.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://c71cc7b8.fredo-erca-hub.pages.dev/compliance-report
-- **API Base**: https://c71cc7b8.fredo-erca-hub.pages.dev/api/erca
+- **Login**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://d9ad714d.fredo-erca-hub.pages.dev/analytics
+- **Business Details**: https://d9ad714d.fredo-erca-hub.pages.dev/business-details?tin={TIN}
+- **Audit Logs**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://d9ad714d.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://d9ad714d.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://d9ad714d.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://d9ad714d.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -492,6 +493,29 @@ npm run deploy
 
 ## Recent Updates
 
+### Business Details Page Integration (November 18, 2025)
+
+**Feature**: Full integration of Business Details page with clickable business links
+
+**Implementation**:
+- Updated Business Details page navigation to match ERCA portal purple theme
+- Added consistent navigation: Analytics, Officials, Businesses links
+- Made business names clickable in Analytics Dashboard (Top Tax Contributors)
+- Business Monitoring page already had "View" button functionality
+- All business links route to `/business-details?tin={TIN}`
+
+**User Flow**:
+1. Analytics Dashboard → Click business name → Business Details
+2. Business Monitoring → Click "View" button → Business Details
+3. Business Details → Full profile with tabs, statistics, and transaction history
+
+**Benefits**:
+- Seamless navigation from analytics to individual business details
+- Consistent user experience across all business-related pages
+- Easy drill-down from aggregate data to individual business profiles
+
+**Status**: ✅ Deployed to production
+
 ### Navigation Integration (November 18, 2025)
 
 **Feature**: Connected Officials Manager and Analytics Dashboard with cross-navigation
@@ -643,11 +667,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.1.0 (Navigation Integration Complete)  
+**Version**: 2.2.0 (Business Details Integration Complete)  
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://c71cc7b8.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://d9ad714d.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
