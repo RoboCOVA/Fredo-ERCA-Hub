@@ -169,6 +169,108 @@ app.post('/api/erca/auth/login', async (c) => {
   }
 })
 
+// Validate session
+app.post('/api/erca/auth/validate', async (c) => {
+  const { DB } = c.env
+  const { session_token } = await c.req.json()
+  
+  try {
+    if (!session_token) {
+      return c.json({ valid: false, error: 'No session token provided' }, 400)
+    }
+    
+    // Check if session exists and is not expired
+    const session: any = await DB.prepare(`
+      SELECT 
+        es.official_id,
+        es.expires_at,
+        eo.is_active,
+        eo.account_locked
+      FROM erca_sessions es
+      JOIN erca_officials eo ON es.official_id = eo.id
+      WHERE es.session_token = ?
+    `).bind(session_token).first()
+    
+    if (!session) {
+      return c.json({ valid: false, error: 'Invalid session' })
+    }
+    
+    // Check if session is expired
+    const now = new Date()
+    const expiresAt = new Date(session.expires_at)
+    if (expiresAt < now) {
+      // Delete expired session
+      await DB.prepare(`
+        DELETE FROM erca_sessions WHERE session_token = ?
+      `).bind(session_token).run()
+      
+      return c.json({ valid: false, error: 'Session expired' })
+    }
+    
+    // Check if account is active
+    if (!session.is_active) {
+      return c.json({ valid: false, error: 'Account is inactive' })
+    }
+    
+    // Check if account is locked
+    if (session.account_locked) {
+      return c.json({ valid: false, error: 'Account is locked' })
+    }
+    
+    // Update last activity
+    await DB.prepare(`
+      UPDATE erca_sessions
+      SET last_activity = CURRENT_TIMESTAMP
+      WHERE session_token = ?
+    `).bind(session_token).run()
+    
+    return c.json({ valid: true, official_id: session.official_id })
+  } catch (error: any) {
+    console.error('Session validation error:', error)
+    return c.json({ valid: false, error: error.message }, 500)
+  }
+})
+
+// Logout
+app.post('/api/erca/auth/logout', async (c) => {
+  const { DB } = c.env
+  const { session_token } = await c.req.json()
+  
+  try {
+    if (session_token) {
+      // Delete session from database
+      await DB.prepare(`
+        DELETE FROM erca_sessions WHERE session_token = ?
+      `).bind(session_token).run()
+      
+      // Log logout action
+      const session: any = await DB.prepare(`
+        SELECT official_id FROM erca_sessions WHERE session_token = ?
+      `).bind(session_token).first()
+      
+      if (session) {
+        await DB.prepare(`
+          INSERT INTO erca_audit_logs (
+            official_id,
+            action,
+            ip_address,
+            user_agent
+          ) VALUES (?, 'logout', ?, ?)
+        `).bind(
+          session.official_id,
+          c.req.header('CF-Connecting-IP') || 'unknown',
+          c.req.header('User-Agent') || 'unknown'
+        ).run()
+      }
+    }
+    
+    return c.json({ success: true, message: 'Logged out successfully' })
+  } catch (error: any) {
+    console.error('Logout error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // Register new ERCA official (requires super admin)
 app.post('/api/erca/auth/register', async (c) => {
   const { DB } = c.env
