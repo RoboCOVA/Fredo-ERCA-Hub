@@ -1007,6 +1007,9 @@ app.get('/analytics', (c) => {
                         <a href="/" class="bg-purple-800 hover:bg-purple-600 px-4 py-2 rounded transition">
                             <i class="fas fa-home mr-2"></i>Home
                         </a>
+                        <a href="/erca-dashboard" class="bg-purple-800 hover:bg-purple-600 px-4 py-2 rounded transition">
+                            <i class="fas fa-users-cog mr-2"></i>Officials
+                        </a>
                         <button onclick="exportReport()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition">
                             <i class="fas fa-file-excel mr-2"></i>Export Report
                         </button>
@@ -1379,6 +1382,9 @@ app.get('/erca-dashboard', (c) => {
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <a href="/analytics" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-chart-line mr-1"></i>Analytics
+                        </a>
                         <a href="/erca-profile" class="text-purple-200 hover:text-white">
                             <i class="fas fa-user-circle mr-1"></i>Profile
                         </a>
@@ -1653,7 +1659,10 @@ app.get('/erca-audit-logs', (c) => {
                     </div>
                     <div class="flex items-center space-x-4">
                         <a href="/erca-dashboard" class="text-purple-200 hover:text-white">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                            <i class="fas fa-users-cog mr-2"></i>Officials
+                        </a>
+                        <a href="/analytics" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-chart-line mr-2"></i>Analytics
                         </a>
                         <button onclick="ercaAuth.logout()" 
                                 class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
@@ -1833,7 +1842,10 @@ app.get('/erca-profile', (c) => {
                     </div>
                     <div class="flex items-center space-x-4">
                         <a href="/erca-dashboard" class="text-purple-200 hover:text-white">
-                            <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                            <i class="fas fa-users-cog mr-2"></i>Officials
+                        </a>
+                        <a href="/analytics" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-chart-line mr-2"></i>Analytics
                         </a>
                         <button onclick="ercaAuth.logout()" 
                                 class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
