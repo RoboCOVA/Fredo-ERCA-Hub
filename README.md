@@ -87,16 +87,17 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Login**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-login
-- **Officials Manager**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-dashboard
-- **Analytics Dashboard**: https://d9ad714d.fredo-erca-hub.pages.dev/analytics
-- **Business Details**: https://d9ad714d.fredo-erca-hub.pages.dev/business-details?tin={TIN}
-- **Audit Logs**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-audit-logs
-- **Profile**: https://d9ad714d.fredo-erca-hub.pages.dev/erca-profile
-- **Invoice Verification**: https://d9ad714d.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://d9ad714d.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://d9ad714d.fredo-erca-hub.pages.dev/compliance-report
-- **API Base**: https://d9ad714d.fredo-erca-hub.pages.dev/api/erca
+- **Homepage**: https://7d3a7c3d.fredo-erca-hub.pages.dev/
+- **Login**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://7d3a7c3d.fredo-erca-hub.pages.dev/analytics
+- **Business Details**: https://7d3a7c3d.fredo-erca-hub.pages.dev/business-details?tin={TIN}
+- **Audit Logs**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://7d3a7c3d.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://7d3a7c3d.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://7d3a7c3d.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://7d3a7c3d.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -493,6 +494,28 @@ npm run deploy
 
 ## Recent Updates
 
+### Homepage Business Links (November 18, 2025)
+
+**Feature**: Made business list clickable on homepage with direct links to business details
+
+**Implementation**:
+- Added "Actions" column to homepage business table
+- Made business names clickable blue links
+- Added "View" button for each business row
+- Both business name and View button route to business details page
+- Updated table colspan to accommodate new Actions column
+
+**User Flow**:
+- Homepage → Click business name OR View button → Business Details
+- Consistent behavior across all pages (Homepage, Analytics, Business Monitoring)
+
+**Benefits**:
+- Users can access business details from any page
+- Homepage now fully integrated with business details navigation
+- Consistent user experience throughout the portal
+
+**Status**: ✅ Deployed to production
+
 ### Business Details Page Integration (November 18, 2025)
 
 **Feature**: Full integration of Business Details page with clickable business links
@@ -667,11 +690,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.2.0 (Business Details Integration Complete)  
+**Version**: 2.3.0 (Homepage Business Links Complete)  
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://d9ad714d.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://7d3a7c3d.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
