@@ -2137,7 +2137,7 @@ app.post('/api/erca/auth/login', async (c) => {
     
     // Log audit trail
     await DB.prepare(`
-      INSERT INTO erca_audit_log (official_id, action, details)
+      INSERT INTO erca_audit_logs (official_id, action, details)
       VALUES (?, 'login', '{"method":"password"}')
     `).bind(official.id).run()
     
@@ -2219,27 +2219,27 @@ app.get('/api/erca/admin/officials', async (c) => {
   try {
     // Validate session
     const session: any = await DB.prepare(`
-      SELECT o.id, o.rank, o.is_super_admin, r.can_manage_users
+      SELECT o.id, o.is_super_admin, o.can_manage_officials
       FROM erca_sessions s
       JOIN erca_officials o ON s.official_id = o.id
-      LEFT JOIN erca_ranks r ON o.rank = r.rank_code
       WHERE s.session_token = ? AND o.is_active = 1 AND s.expires_at > datetime('now')
     `).bind(auth_token).first()
     
-    if (!session || (!session.is_super_admin && !session.can_manage_users)) {
+    if (!session || (!session.is_super_admin && !session.can_manage_officials)) {
       return c.json({ error: 'Unauthorized' }, 403)
     }
     
     // Get all officials
     const { results } = await DB.prepare(`
       SELECT 
-        o.id, o.full_name, o.employee_id, o.email, o.phone,
-        o.rank, r.rank_name, r.rank_level, o.department, o.region,
-        o.office_location, o.is_super_admin, o.is_active,
-        o.created_at, o.last_login_at
-      FROM erca_officials o
-      LEFT JOIN erca_ranks r ON o.rank = r.rank_code
-      ORDER BY r.rank_level ASC, o.full_name ASC
+        id, full_name, employee_id, email, phone,
+        department, rank_name, office_location, 
+        is_super_admin, is_active,
+        can_view_businesses, can_view_transactions, can_view_reports,
+        can_manage_officials, can_audit_businesses, can_issue_penalties,
+        created_at, last_login
+      FROM erca_officials
+      ORDER BY full_name ASC
     `).all()
     
     return c.json({ officials: results })
@@ -2257,14 +2257,13 @@ app.post('/api/erca/admin/officials', async (c) => {
   try {
     // Validate session
     const session: any = await DB.prepare(`
-      SELECT o.id, o.is_super_admin, r.can_manage_users
+      SELECT o.id, o.is_super_admin, o.can_manage_officials
       FROM erca_sessions s
       JOIN erca_officials o ON s.official_id = o.id
-      LEFT JOIN erca_ranks r ON o.rank = r.rank_code
       WHERE s.session_token = ? AND o.is_active = 1 AND s.expires_at > datetime('now')
     `).bind(auth_token).first()
     
-    if (!session || (!session.is_super_admin && !session.can_manage_users)) {
+    if (!session || (!session.is_super_admin && !session.can_manage_officials)) {
       return c.json({ error: 'Unauthorized' }, 403)
     }
     
@@ -2274,24 +2273,23 @@ app.post('/api/erca/admin/officials', async (c) => {
     // Create official
     const result = await DB.prepare(`
       INSERT INTO erca_officials 
-        (full_name, employee_id, email, phone, password_hash, rank, department, region, office_location, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (full_name, employee_id, email, phone, password_hash, rank_name, department, office_location, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       officialData.full_name,
       officialData.employee_id,
       officialData.email,
       officialData.phone,
       password_hash,
-      officialData.rank,
-      officialData.department || null,
-      officialData.region || null,
+      officialData.rank_name || 'Official',
+      officialData.department || 'General',
       officialData.office_location || null,
       session.id
     ).run()
     
     // Log audit trail
     await DB.prepare(`
-      INSERT INTO erca_audit_log (official_id, action, entity_type, entity_id, details)
+      INSERT INTO erca_audit_logs (official_id, action, entity_type, entity_id, details)
       VALUES (?, 'create_user', 'official', ?, ?)
     `).bind(
       session.id,
@@ -2320,14 +2318,13 @@ app.put('/api/erca/admin/officials/:id', async (c) => {
   try {
     // Validate session
     const session: any = await DB.prepare(`
-      SELECT o.id, o.is_super_admin, r.can_manage_users
+      SELECT o.id, o.is_super_admin, o.can_manage_officials
       FROM erca_sessions s
       JOIN erca_officials o ON s.official_id = o.id
-      LEFT JOIN erca_ranks r ON o.rank = r.rank_code
       WHERE s.session_token = ? AND o.is_active = 1 AND s.expires_at > datetime('now')
     `).bind(auth_token).first()
     
-    if (!session || (!session.is_super_admin && !session.can_manage_users)) {
+    if (!session || (!session.is_super_admin && !session.can_manage_officials)) {
       return c.json({ error: 'Unauthorized' }, 403)
     }
     
@@ -2347,17 +2344,13 @@ app.put('/api/erca/admin/officials/:id', async (c) => {
       updateFields.push('phone = ?')
       updateValues.push(updates.phone)
     }
-    if (updates.rank) {
-      updateFields.push('rank = ?')
-      updateValues.push(updates.rank)
+    if (updates.rank_name) {
+      updateFields.push('rank_name = ?')
+      updateValues.push(updates.rank_name)
     }
     if (updates.department) {
       updateFields.push('department = ?')
       updateValues.push(updates.department)
-    }
-    if (updates.region) {
-      updateFields.push('region = ?')
-      updateValues.push(updates.region)
     }
     if (updates.office_location) {
       updateFields.push('office_location = ?')
@@ -2379,7 +2372,7 @@ app.put('/api/erca/admin/officials/:id', async (c) => {
     
     // Log audit trail
     await DB.prepare(`
-      INSERT INTO erca_audit_log (official_id, action, entity_type, entity_id, details)
+      INSERT INTO erca_audit_logs (official_id, action, entity_type, entity_id, details)
       VALUES (?, 'update_user', 'official', ?, ?)
     `).bind(session.id, official_id, JSON.stringify(updates)).run()
     
@@ -2442,7 +2435,7 @@ app.get('/api/erca/admin/audit-logs', async (c) => {
       SELECT 
         a.id, a.action, a.entity_type, a.entity_id, a.details, a.ip_address, a.created_at,
         o.full_name, o.employee_id, o.rank
-      FROM erca_audit_log a
+      FROM erca_audit_logs a
       JOIN erca_officials o ON a.official_id = o.id
       ORDER BY a.created_at DESC
       LIMIT ?
@@ -2494,7 +2487,7 @@ app.post('/api/erca/auth/change-password', async (c) => {
     
     // Log audit trail
     await DB.prepare(`
-      INSERT INTO erca_audit_log (official_id, action, details)
+      INSERT INTO erca_audit_logs (official_id, action, details)
       VALUES (?, 'password_change', '{"success":true}')
     `).bind(session.id).run()
     
