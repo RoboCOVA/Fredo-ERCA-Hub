@@ -489,6 +489,25 @@ npm run deploy
 
 ## Recent Fixes
 
+### Database Schema Alignment Fix (November 18, 2025)
+
+**Issue**: ERCA Officials Manager showed "error loading officials"
+
+**Root Cause**: 
+- Code tried to JOIN with `erca_ranks` table which doesn't exist
+- Used wrong column names (`rank` instead of `rank_name`, included non-existent `region`)
+- Wrong audit table name (`erca_audit_log` instead of `erca_audit_logs`)
+- Typo in audit table name (`erca_audit_logss`)
+
+**Solution**:
+- Removed all `erca_ranks` table JOINs
+- Updated column names to match actual schema
+- Fixed audit table name consistently
+- Updated permission checks to use direct columns
+- Applied migration to fredo-erca-hub local database
+
+**Status**: ✅ Fixed and deployed to production
+
 ### Permission Mismatch Fix (November 18, 2025)
 
 **Issue**: ERCA001 user couldn't access ERCA Officials Manager page despite being super admin
@@ -601,11 +620,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.0.2 (Permission Fix Complete)  
+**Version**: 2.0.3 (Database Schema Fix Complete)  
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://74d563d7.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://6af64975.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
