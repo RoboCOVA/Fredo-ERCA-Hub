@@ -87,17 +87,17 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Homepage**: https://7d3a7c3d.fredo-erca-hub.pages.dev/
-- **Login**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-login
-- **Officials Manager**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-dashboard
-- **Analytics Dashboard**: https://7d3a7c3d.fredo-erca-hub.pages.dev/analytics
-- **Business Details**: https://7d3a7c3d.fredo-erca-hub.pages.dev/business-details?tin={TIN}
-- **Audit Logs**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-audit-logs
-- **Profile**: https://7d3a7c3d.fredo-erca-hub.pages.dev/erca-profile
-- **Invoice Verification**: https://7d3a7c3d.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://7d3a7c3d.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://7d3a7c3d.fredo-erca-hub.pages.dev/compliance-report
-- **API Base**: https://7d3a7c3d.fredo-erca-hub.pages.dev/api/erca
+- **Homepage**: https://51657682.fredo-erca-hub.pages.dev/
+- **Login**: https://51657682.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://51657682.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://51657682.fredo-erca-hub.pages.dev/analytics
+- **Business Details**: https://51657682.fredo-erca-hub.pages.dev/business-details?tin={TIN}
+- **Audit Logs**: https://51657682.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://51657682.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://51657682.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://51657682.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://51657682.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://51657682.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -694,7 +694,7 @@ For issues, questions, or contributions:
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://7d3a7c3d.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://51657682.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
