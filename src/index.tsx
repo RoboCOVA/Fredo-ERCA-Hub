@@ -34,20 +34,40 @@ app.get('/api/health', (c) => {
 
 app.post('/api/erca/auth/login', async (c) => {
   const { DB } = c.env
-  const { username, password } = await c.req.json()
+  const { employee_id, password, username } = await c.req.json()
   
   try {
+    // Accept either employee_id or username for flexibility
+    const loginId = employee_id || username
+    
     // In production, implement proper government authentication
     // For now, use a simple check
-    if (username === 'erca_admin' && password === 'erca2024') {
+    if (loginId === 'erca_admin' && password === 'erca2024') {
+      // Generate session token
+      const sessionToken = `erca_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      
+      // Set expiration to 24 hours from now
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      
       return c.json({ 
         success: true,
-        user: {
+        official: {
           id: 100,
-          username: 'erca_admin',
+          employee_id: 'erca_admin',
+          full_name: 'ERCA Administrator',
           role: 'erca_official',
-          department: 'Revenue Monitoring'
-        }
+          department: 'Revenue Monitoring',
+          rank_name: 'Senior Official',
+          is_super_admin: 1,
+          permissions: {
+            view_businesses: 1,
+            view_transactions: 1,
+            view_reports: 1,
+            manage_users: 1
+          }
+        },
+        session_token: sessionToken,
+        expires_at: expiresAt
       })
     }
     
@@ -123,7 +143,7 @@ app.get('/api/erca/businesses/:tin', async (c) => {
         total_amount,
         vat_amount,
         erca_sync_status,
-        erca_synced_at
+        erca_sync_date
       FROM sales
       WHERE business_id = (SELECT id FROM businesses WHERE tin = ?)
       ORDER BY sale_date DESC

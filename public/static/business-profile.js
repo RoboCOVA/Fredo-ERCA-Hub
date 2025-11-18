@@ -39,9 +39,9 @@ async function loadBusinessProfile(tin) {
     showLoading();
     console.log('Loading business profile for TIN:', tin);
     
-    // Call vPOS API to get business details
+    // Call ERCA Hub API to get business details
     const response = await axios.get(
-      `https://28df9da6.fredo-vpos.pages.dev/api/erca/businesses/${tin}`
+      `/api/erca/businesses/${tin}`
     );
     
     console.log('Business profile response:', response.data);
