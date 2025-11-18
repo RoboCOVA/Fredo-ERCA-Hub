@@ -446,7 +446,7 @@ async function loadTopBusinesses() {
       row.innerHTML = `
         <td class="px-6 py-4 whitespace-nowrap text-center">${rankBadge}</td>
         <td class="px-6 py-4">
-          <div class="font-semibold text-gray-900">${business.business_name}</div>
+          <a href="/business-details?tin=${business.tin}" class="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">${business.business_name}</a>
           <div class="text-sm text-gray-500">TIN: ${business.tin}</div>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">

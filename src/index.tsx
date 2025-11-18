@@ -2833,22 +2833,29 @@ app.get('/business-details', (c) => {
     </head>
     <body class="bg-gray-100">
         <!-- Navigation -->
-        <nav class="bg-gradient-to-r from-blue-800 to-blue-900 text-white shadow-lg">
+        <nav class="bg-purple-900 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
+                <div class="flex items-center justify-between h-16">
                     <div class="flex items-center">
                         <i class="fas fa-landmark text-2xl mr-3"></i>
-                        <span class="text-xl font-bold">ERCA - Business Profile</span>
+                        <div>
+                            <h1 class="text-lg font-bold">ERCA Portal</h1>
+                            <p class="text-xs text-purple-200">Business Profile</p>
+                        </div>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <a href="/business-monitoring" class="hover:text-blue-200">
-                            <i class="fas fa-arrow-left mr-1"></i> Back to Monitoring
+                        <a href="/business-monitoring" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-building mr-1"></i>Businesses
                         </a>
-                        <a href="/erca-dashboard" class="hover:text-blue-200">
-                            <i class="fas fa-home mr-1"></i> Dashboard
+                        <a href="/analytics" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-chart-line mr-1"></i>Analytics
                         </a>
-                        <button onclick="ercaAuth.logout()" class="hover:text-blue-200">
-                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        <a href="/erca-dashboard" class="text-purple-200 hover:text-white">
+                            <i class="fas fa-users-cog mr-1"></i>Officials
+                        </a>
+                        <button onclick="ercaAuth.logout()" 
+                                class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </div>
                 </div>
