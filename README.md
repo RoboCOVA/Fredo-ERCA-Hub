@@ -87,12 +87,15 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Dashboard**: https://4797ad2f.fredo-erca-hub.pages.dev
-- **Invoice Verification**: https://4797ad2f.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://4797ad2f.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://4797ad2f.fredo-erca-hub.pages.dev/compliance-report
-- **Production Branch**: https://main.fredo-erca-hub.pages.dev
-- **API Base**: https://4797ad2f.fredo-erca-hub.pages.dev/api/erca
+- **Login**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://c71cc7b8.fredo-erca-hub.pages.dev/analytics
+- **Audit Logs**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://c71cc7b8.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://c71cc7b8.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://c71cc7b8.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://c71cc7b8.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://c71cc7b8.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -487,6 +490,26 @@ npm run deploy
    - Update `wrangler.jsonc` with production database ID
    - Verify D1 binding configuration
 
+## Recent Updates
+
+### Navigation Integration (November 18, 2025)
+
+**Feature**: Connected Officials Manager and Analytics Dashboard with cross-navigation
+
+**Implementation**:
+- Added "Analytics" link to Officials Manager navigation bar
+- Added "Officials" link to Analytics Dashboard navigation bar
+- Updated Audit Logs and Profile pages with both links
+- All ERCA portal pages now have consistent navigation
+- Users can seamlessly switch between management and analytics views
+
+**Benefits**:
+- Improved user experience with easy access to all portal features
+- Super admins can quickly navigate between officials management and analytics
+- Consistent navigation structure across all pages
+
+**Status**: ✅ Deployed to production
+
 ## Recent Fixes
 
 ### Database Schema Alignment Fix (November 18, 2025)
@@ -620,11 +643,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.0.3 (Database Schema Fix Complete)  
+**Version**: 2.1.0 (Navigation Integration Complete)  
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://6af64975.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://c71cc7b8.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
