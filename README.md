@@ -489,6 +489,22 @@ npm run deploy
 
 ## Recent Fixes
 
+### Permission Mismatch Fix (November 18, 2025)
+
+**Issue**: ERCA001 user couldn't access ERCA Officials Manager page despite being super admin
+
+**Root Cause**: 
+- Frontend checked for `can_manage_users` permission
+- Backend returned `manage_officials` permission
+- Permission name mismatch caused access denial
+
+**Solution**:
+- Added `can_manage_users` as alias to `manage_officials` in permissions object
+- Both permission names now work for Officials Manager access
+- All super admin permissions now properly recognized
+
+**Status**: ✅ Fixed and deployed to production
+
 ### Auto-Logout Issue Fix (November 18, 2025)
 
 **Issue**: Officials successfully logged in but were immediately logged out automatically
@@ -585,11 +601,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.0.1 (Session Fix Complete)  
+**Version**: 2.0.2 (Permission Fix Complete)  
 **Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
 **Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
-**Latest Deployment**: https://f111c66d.fredo-erca-hub.pages.dev
+**Latest Deployment**: https://74d563d7.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
