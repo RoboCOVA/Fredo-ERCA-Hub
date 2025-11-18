@@ -18,6 +18,8 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
    - 9-level government hierarchy (CG, DCG, DG, DIR, DD, TL, SO, OFF, AO)
    - Complete CRUD operations for officials
    - Role-based permissions system
+   - Session validation and management (24-hour sessions)
+   - Secure logout with audit logging
    - Audit logging of all actions
    - Profile management and password change
    - CSV export of officials and audit logs
@@ -487,6 +489,26 @@ npm run deploy
 
 ## Recent Fixes
 
+### Auto-Logout Issue Fix (November 18, 2025)
+
+**Issue**: Officials successfully logged in but were immediately logged out automatically
+
+**Root Cause**: 
+- Frontend `validateSession()` function called `/api/erca/auth/validate` endpoint which didn't exist
+- Validation failure triggered `clearSession()` and redirect to login
+
+**Solution**:
+1. Added `/api/erca/auth/validate` endpoint with full session validation
+   - Checks session token existence in database
+   - Validates session is not expired (24-hour check)
+   - Verifies official account is active and not locked
+   - Updates last_activity timestamp
+2. Added `/api/erca/auth/logout` endpoint for clean logout
+   - Removes session from database
+   - Logs logout action in audit_logs
+
+**Status**: ✅ Fixed and deployed to production
+
 ### Dashboard Error Fix (November 14, 2025)
 
 **Issue**: Dashboard displayed "error loading dashboard data"
@@ -563,10 +585,11 @@ For issues, questions, or contributions:
 
 ## Production Deployment Status
 
-**Version**: 2.0.0 (Phase 3 Complete)  
-**Last Updated**: November 15, 2025  
+**Version**: 2.0.1 (Session Fix Complete)  
+**Last Updated**: November 18, 2025  
 **Status**: ✅ Fully Operational in Production  
-**Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development
+**Deployment**: Production (Cloudflare Pages) + Sandbox + Local Development  
+**Latest Deployment**: https://f111c66d.fredo-erca-hub.pages.dev
 
 ### Production Metrics (as of deployment):
 - **Total Businesses**: 7 registered businesses
