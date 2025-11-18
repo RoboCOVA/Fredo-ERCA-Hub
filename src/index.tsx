@@ -40,39 +40,308 @@ app.post('/api/erca/auth/login', async (c) => {
     // Accept either employee_id or username for flexibility
     const loginId = employee_id || username
     
-    // In production, implement proper government authentication
-    // For now, use a simple check
-    if (loginId === 'erca_admin' && password === 'erca2024') {
-      // Generate session token
-      const sessionToken = `erca_${Date.now()}_${Math.random().toString(36).substring(7)}`
-      
-      // Set expiration to 24 hours from now
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      
-      return c.json({ 
-        success: true,
-        official: {
-          id: 100,
-          employee_id: 'erca_admin',
-          full_name: 'ERCA Administrator',
-          role: 'erca_official',
-          department: 'Revenue Monitoring',
-          rank_name: 'Senior Official',
-          is_super_admin: 1,
-          permissions: {
-            view_businesses: 1,
-            view_transactions: 1,
-            view_reports: 1,
-            manage_users: 1
-          }
-        },
-        session_token: sessionToken,
-        expires_at: expiresAt
-      })
+    if (!loginId || !password) {
+      return c.json({ error: 'Employee ID and password are required' }, 400)
     }
     
-    return c.json({ error: 'Invalid credentials' }, 401)
+    // Hash the provided password using SHA-256
+    const encoder = new TextEncoder()
+    const data = encoder.encode(password)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    // Query database for official
+    const official: any = await DB.prepare(`
+      SELECT 
+        id,
+        employee_id,
+        full_name,
+        email,
+        phone,
+        department,
+        rank_name,
+        office_location,
+        is_super_admin,
+        is_active,
+        can_view_businesses,
+        can_view_transactions,
+        can_view_reports,
+        can_manage_officials,
+        can_audit_businesses,
+        can_issue_penalties,
+        failed_login_attempts,
+        account_locked
+      FROM erca_officials
+      WHERE (employee_id = ? OR email = ?) AND password_hash = ?
+    `).bind(loginId, loginId, passwordHash).first()
+    
+    if (!official) {
+      // Invalid credentials - could increment failed attempts here
+      return c.json({ error: 'Invalid employee ID or password' }, 401)
+    }
+    
+    // Check if account is active
+    if (!official.is_active) {
+      return c.json({ error: 'Account is inactive. Contact your administrator.' }, 403)
+    }
+    
+    // Check if account is locked
+    if (official.account_locked) {
+      return c.json({ error: 'Account is locked. Contact your administrator.' }, 403)
+    }
+    
+    // Generate session token
+    const sessionToken = `erca_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    
+    // Set expiration to 24 hours from now
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    
+    // Store session in database
+    await DB.prepare(`
+      INSERT INTO erca_sessions (
+        official_id,
+        session_token,
+        ip_address,
+        user_agent,
+        expires_at
+      ) VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      official.id,
+      sessionToken,
+      c.req.header('CF-Connecting-IP') || 'unknown',
+      c.req.header('User-Agent') || 'unknown',
+      expiresAt
+    ).run()
+    
+    // Update last login
+    await DB.prepare(`
+      UPDATE erca_officials
+      SET last_login = CURRENT_TIMESTAMP, failed_login_attempts = 0
+      WHERE id = ?
+    `).bind(official.id).run()
+    
+    // Log login action
+    await DB.prepare(`
+      INSERT INTO erca_audit_logs (
+        official_id,
+        action,
+        ip_address,
+        user_agent
+      ) VALUES (?, 'login', ?, ?)
+    `).bind(
+      official.id,
+      c.req.header('CF-Connecting-IP') || 'unknown',
+      c.req.header('User-Agent') || 'unknown'
+    ).run()
+    
+    // Build permissions object
+    const permissions = {
+      view_businesses: official.can_view_businesses,
+      view_transactions: official.can_view_transactions,
+      view_reports: official.can_view_reports,
+      manage_officials: official.can_manage_officials,
+      audit_businesses: official.can_audit_businesses,
+      issue_penalties: official.can_issue_penalties
+    }
+    
+    return c.json({ 
+      success: true,
+      official: {
+        id: official.id,
+        employee_id: official.employee_id,
+        full_name: official.full_name,
+        email: official.email,
+        phone: official.phone,
+        role: 'erca_official',
+        department: official.department,
+        rank_name: official.rank_name,
+        office_location: official.office_location,
+        is_super_admin: official.is_super_admin,
+        permissions
+      },
+      session_token: sessionToken,
+      expires_at: expiresAt
+    })
   } catch (error: any) {
+    console.error('Login error:', error)
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Register new ERCA official (requires super admin)
+app.post('/api/erca/auth/register', async (c) => {
+  const { DB } = c.env
+  const {
+    employee_id,
+    full_name,
+    email,
+    phone,
+    password,
+    department,
+    rank_name,
+    office_location,
+    permissions,
+    created_by_token
+  } = await c.req.json()
+  
+  try {
+    // Validate required fields
+    if (!employee_id || !full_name || !email || !password || !department || !rank_name) {
+      return c.json({ error: 'Missing required fields' }, 400)
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return c.json({ error: 'Invalid email format' }, 400)
+    }
+    
+    // Validate password strength (minimum 8 characters)
+    if (password.length < 8) {
+      return c.json({ error: 'Password must be at least 8 characters long' }, 400)
+    }
+    
+    // If created_by_token provided, verify it's from a super admin
+    if (created_by_token) {
+      const session: any = await DB.prepare(`
+        SELECT es.official_id, eo.is_super_admin
+        FROM erca_sessions es
+        JOIN erca_officials eo ON es.official_id = eo.id
+        WHERE es.session_token = ? AND es.expires_at > datetime('now')
+      `).bind(created_by_token).first()
+      
+      if (!session || !session.is_super_admin) {
+        return c.json({ error: 'Unauthorized. Only super admins can register officials.' }, 403)
+      }
+    }
+    
+    // Check if employee_id or email already exists
+    const existing: any = await DB.prepare(`
+      SELECT id FROM erca_officials
+      WHERE employee_id = ? OR email = ?
+    `).bind(employee_id, email).first()
+    
+    if (existing) {
+      return c.json({ error: 'Employee ID or email already exists' }, 400)
+    }
+    
+    // Hash password using SHA-256
+    const encoder = new TextEncoder()
+    const data = encoder.encode(password)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    // Insert new official
+    const result = await DB.prepare(`
+      INSERT INTO erca_officials (
+        employee_id,
+        full_name,
+        email,
+        phone,
+        password_hash,
+        department,
+        rank_name,
+        office_location,
+        is_super_admin,
+        is_active,
+        can_view_businesses,
+        can_view_transactions,
+        can_view_reports,
+        can_manage_officials,
+        can_audit_businesses,
+        can_issue_penalties
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      employee_id,
+      full_name,
+      email,
+      phone || null,
+      passwordHash,
+      department,
+      rank_name,
+      office_location || null,
+      permissions?.is_super_admin || 0,
+      1, // is_active - default to active
+      permissions?.can_view_businesses !== undefined ? permissions.can_view_businesses : 1,
+      permissions?.can_view_transactions !== undefined ? permissions.can_view_transactions : 1,
+      permissions?.can_view_reports !== undefined ? permissions.can_view_reports : 1,
+      permissions?.can_manage_officials || 0,
+      permissions?.can_audit_businesses || 0,
+      permissions?.can_issue_penalties || 0
+    ).run()
+    
+    const officialId = result.meta.last_row_id
+    
+    return c.json({
+      success: true,
+      message: 'Official registered successfully',
+      official: {
+        id: officialId,
+        employee_id,
+        full_name,
+        email,
+        department,
+        rank_name
+      }
+    })
+  } catch (error: any) {
+    console.error('Registration error:', error)
+    return c.json({ error: error.message }, 500)
+  }
+})
+
+// Get all ERCA officials (super admin only)
+app.get('/api/erca/officials', async (c) => {
+  const { DB } = c.env
+  const sessionToken = c.req.header('Authorization')?.replace('Bearer ', '')
+  
+  try {
+    // Verify session and super admin
+    if (!sessionToken) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+    
+    const session: any = await DB.prepare(`
+      SELECT es.official_id, eo.is_super_admin
+      FROM erca_sessions es
+      JOIN erca_officials eo ON es.official_id = eo.id
+      WHERE es.session_token = ? AND es.expires_at > datetime('now')
+    `).bind(sessionToken).first()
+    
+    if (!session || !session.is_super_admin) {
+      return c.json({ error: 'Unauthorized. Super admin access required.' }, 403)
+    }
+    
+    // Get all officials
+    const { results: officials } = await DB.prepare(`
+      SELECT 
+        id,
+        employee_id,
+        full_name,
+        email,
+        phone,
+        department,
+        rank_name,
+        office_location,
+        is_super_admin,
+        is_active,
+        can_view_businesses,
+        can_view_transactions,
+        can_view_reports,
+        can_manage_officials,
+        can_audit_businesses,
+        can_issue_penalties,
+        last_login,
+        created_at
+      FROM erca_officials
+      ORDER BY created_at DESC
+    `).all()
+    
+    return c.json({ officials })
+  } catch (error: any) {
+    console.error('Get officials error:', error)
     return c.json({ error: error.message }, 500)
   }
 })
