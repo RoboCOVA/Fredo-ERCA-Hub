@@ -141,6 +141,7 @@ app.post('/api/erca/auth/login', async (c) => {
       view_transactions: official.can_view_transactions,
       view_reports: official.can_view_reports,
       manage_officials: official.can_manage_officials,
+      can_manage_users: official.can_manage_officials, // Alias for frontend compatibility
       audit_businesses: official.can_audit_businesses,
       issue_penalties: official.can_issue_penalties
     }
