@@ -559,6 +559,30 @@ npm run deploy
 
 ## Recent Fixes
 
+### Missing Departments Dropdown Fix (November 20, 2025)
+
+**Issue**: Department dropdown in "Add New ERCA Official" form was empty
+
+**Root Cause**: 
+- Production database was missing the `erca_departments` table
+- Backend `/api/erca/admin/departments` endpoint returned empty results
+- Frontend dropdown showed "Select Department" with no options
+
+**Solution**:
+- Created migration `0006_add_departments.sql` with departments table schema
+- Applied migration directly to production database bypassing migration conflicts
+- Added 8 default Ethiopian government departments:
+  - Revenue Monitoring (REV)
+  - Customs Operations (CUST)
+  - Audit and Investigation (AUDIT)
+  - Compliance and Enforcement (COMP)
+  - Information Technology (IT)
+  - Legal Affairs (LEGAL)
+  - Human Resources (HR)
+  - Finance and Administration (FIN)
+
+**Status**: ✅ Fixed - departments now available in production
+
 ### Audit Logs Database Column Fix (November 20, 2025)
 
 **Issue**: Audit Logs page showed "error loading audit logs"
