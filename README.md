@@ -7,7 +7,7 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
 **Name**: Fredo ERCA Revenue Hub  
 **Purpose**: Central tax compliance monitoring dashboard for Ethiopian tax authorities  
 **Type**: Government portal with user management, analytics, verification, and compliance monitoring  
-**Production URL**: https://4797ad2f.fredo-erca-hub.pages.dev  
+**Production URL**: https://c5d0c732.fredo-erca-hub.pages.dev  
 **Integrated with**: Fredo vPOS (https://28df9da6.fredo-vpos.pages.dev)
 
 ## Features Status
@@ -87,17 +87,17 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Homepage**: https://51657682.fredo-erca-hub.pages.dev/
-- **Login**: https://51657682.fredo-erca-hub.pages.dev/erca-login
-- **Officials Manager**: https://51657682.fredo-erca-hub.pages.dev/erca-dashboard
-- **Analytics Dashboard**: https://51657682.fredo-erca-hub.pages.dev/analytics
-- **Business Details**: https://51657682.fredo-erca-hub.pages.dev/business-details?tin={TIN}
-- **Audit Logs**: https://51657682.fredo-erca-hub.pages.dev/erca-audit-logs
-- **Profile**: https://51657682.fredo-erca-hub.pages.dev/erca-profile
-- **Invoice Verification**: https://51657682.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://51657682.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://51657682.fredo-erca-hub.pages.dev/compliance-report
-- **API Base**: https://51657682.fredo-erca-hub.pages.dev/api/erca
+- **Homepage**: https://c5d0c732.fredo-erca-hub.pages.dev/
+- **Login**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://c5d0c732.fredo-erca-hub.pages.dev/analytics
+- **Business Details**: https://c5d0c732.fredo-erca-hub.pages.dev/business-details?tin={TIN}
+- **Audit Logs**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://c5d0c732.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://c5d0c732.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://c5d0c732.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://c5d0c732.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -558,6 +558,22 @@ npm run deploy
 **Status**: ✅ Deployed to production
 
 ## Recent Fixes
+
+### Audit Logs Database Column Fix (November 20, 2025)
+
+**Issue**: Audit Logs page showed "error loading audit logs"
+
+**Root Cause**: 
+- Backend query tried to select `o.rank` column from `erca_officials` table
+- The actual column name is `rank_name` (not `rank`)
+- SQL query failed causing 500 error on `/api/erca/admin/audit-logs` endpoint
+
+**Solution**:
+- Updated audit logs query to use `o.rank_name as rank`
+- Query now correctly aliases `rank_name` column to `rank` for frontend compatibility
+- Frontend JavaScript expects `rank` field in response
+
+**Status**: ✅ Fixed and deployed to production (https://c5d0c732.fredo-erca-hub.pages.dev)
 
 ### Database Schema Alignment Fix (November 18, 2025)
 
