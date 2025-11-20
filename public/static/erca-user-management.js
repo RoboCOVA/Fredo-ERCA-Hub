@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load data
   await Promise.all([
     loadOfficials(),
-    loadRanks(),
     loadDepartments()
   ])
 })
@@ -177,12 +176,6 @@ function openAddModal() {
   document.getElementById('official-form').reset()
   document.getElementById('official-id').value = ''
   
-  // Populate rank dropdown
-  const rankSelect = document.getElementById('official-rank')
-  rankSelect.innerHTML = ranks.map(rank => 
-    `<option value="${rank.rank_code}">${rank.rank_name}</option>`
-  ).join('')
-  
   // Populate department dropdown
   const deptSelect = document.getElementById('official-department')
   deptSelect.innerHTML = '<option value="">Select Department</option>' + 
@@ -208,7 +201,7 @@ async function saveOfficial(e) {
     employee_id: document.getElementById('official-employee-id').value,
     email: document.getElementById('official-email').value,
     phone: document.getElementById('official-phone').value,
-    rank: document.getElementById('official-rank').value,
+    rank_name: document.getElementById('official-rank').value || 'Official',
     department: document.getElementById('official-department').value || null,
     region: document.getElementById('official-region').value || null,
     office_location: document.getElementById('official-office').value || null
