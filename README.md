@@ -7,7 +7,7 @@ Ethiopian Revenue and Customs Authority (ERCA) compliance monitoring and reporti
 **Name**: Fredo ERCA Revenue Hub  
 **Purpose**: Central tax compliance monitoring dashboard for Ethiopian tax authorities  
 **Type**: Government portal with user management, analytics, verification, and compliance monitoring  
-**Production URL**: https://c5d0c732.fredo-erca-hub.pages.dev  
+**Production URL**: https://f27ca0a1.fredo-erca-hub.pages.dev  
 **Integrated with**: Fredo vPOS (https://28df9da6.fredo-vpos.pages.dev)
 
 ## Features Status
@@ -87,17 +87,17 @@ All integration endpoints are live and working:
 ## Access URLs
 
 ### Production (Cloudflare Pages) - ✅ DEPLOYED
-- **Homepage**: https://c5d0c732.fredo-erca-hub.pages.dev/
-- **Login**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-login
-- **Officials Manager**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-dashboard
-- **Analytics Dashboard**: https://c5d0c732.fredo-erca-hub.pages.dev/analytics
-- **Business Details**: https://c5d0c732.fredo-erca-hub.pages.dev/business-details?tin={TIN}
-- **Audit Logs**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-audit-logs
-- **Profile**: https://c5d0c732.fredo-erca-hub.pages.dev/erca-profile
-- **Invoice Verification**: https://c5d0c732.fredo-erca-hub.pages.dev/verify-invoice
-- **Business Monitoring**: https://c5d0c732.fredo-erca-hub.pages.dev/business-monitoring
-- **Compliance Report**: https://c5d0c732.fredo-erca-hub.pages.dev/compliance-report
-- **API Base**: https://c5d0c732.fredo-erca-hub.pages.dev/api/erca
+- **Homepage**: https://f27ca0a1.fredo-erca-hub.pages.dev/
+- **Login**: https://f27ca0a1.fredo-erca-hub.pages.dev/erca-login
+- **Officials Manager**: https://f27ca0a1.fredo-erca-hub.pages.dev/erca-dashboard
+- **Analytics Dashboard**: https://f27ca0a1.fredo-erca-hub.pages.dev/analytics
+- **Business Details**: https://f27ca0a1.fredo-erca-hub.pages.dev/business-details?tin={TIN}
+- **Audit Logs**: https://f27ca0a1.fredo-erca-hub.pages.dev/erca-audit-logs
+- **Profile**: https://f27ca0a1.fredo-erca-hub.pages.dev/erca-profile
+- **Invoice Verification**: https://f27ca0a1.fredo-erca-hub.pages.dev/verify-invoice
+- **Business Monitoring**: https://f27ca0a1.fredo-erca-hub.pages.dev/business-monitoring
+- **Compliance Report**: https://f27ca0a1.fredo-erca-hub.pages.dev/compliance-report
+- **API Base**: https://f27ca0a1.fredo-erca-hub.pages.dev/api/erca
 - **Status**: ✅ Active with full ERCA-vPOS integration operational
 
 ### Sandbox Environment
@@ -559,6 +559,25 @@ npm run deploy
 
 ## Recent Fixes
 
+### Rank Field Made Optional (November 20, 2025)
+
+**Issue**: Rank dropdown was empty and required field was blocking official creation
+
+**Root Cause**: 
+- Backend was querying `erca_ranks` table which doesn't exist in production
+- Rank field was marked as required with asterisk
+- Officials couldn't be created without selecting a rank from empty dropdown
+
+**Solution**:
+- Changed Rank field from required dropdown to optional text input
+- Removed dependency on `erca_ranks` table
+- Frontend now accepts free-text rank input (e.g., "Senior Officer", "Inspector")
+- Backend uses default value "Official" if rank is not provided
+- Updated field label from "Rank *" to "Rank" (removed asterisk)
+- Frontend sends `rank_name` field with default "Official" value if empty
+
+**Status**: ✅ Fixed - officials can now be created with custom or no rank
+
 ### Missing Departments Dropdown Fix (November 20, 2025)
 
 **Issue**: Department dropdown in "Add New ERCA Official" form was empty
@@ -597,7 +616,7 @@ npm run deploy
 - Query now correctly aliases `rank_name` column to `rank` for frontend compatibility
 - Frontend JavaScript expects `rank` field in response
 
-**Status**: ✅ Fixed and deployed to production (https://c5d0c732.fredo-erca-hub.pages.dev)
+**Status**: ✅ Fixed and deployed to production (https://f27ca0a1.fredo-erca-hub.pages.dev)
 
 ### Database Schema Alignment Fix (November 18, 2025)
 
