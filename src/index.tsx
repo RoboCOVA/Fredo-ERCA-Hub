@@ -2447,7 +2447,7 @@ app.get('/api/erca/admin/audit-logs', async (c) => {
     const { results } = await DB.prepare(`
       SELECT 
         a.id, a.action, a.entity_type, a.entity_id, a.details, a.ip_address, a.created_at,
-        o.full_name, o.employee_id, o.rank
+        o.full_name, o.employee_id, o.rank_name as rank
       FROM erca_audit_logs a
       JOIN erca_officials o ON a.official_id = o.id
       ORDER BY a.created_at DESC
